@@ -34,7 +34,7 @@ export interface NoxClient {
   db: Firestore;
   rtdb: Database;
   storage: FirebaseStorage;
-  /** Servidor (se `apiBaseUrl` estiver configurada) ou modo direto pelo Firestore. */
+  /** Operações de dados (modo direto) + voz pelo servidor, se configurado. */
   api: NoxApi;
   /** true quando há servidor: habilita a voz. */
   hasServer: boolean;
@@ -66,14 +66,24 @@ export function createNoxClient(config: NoxConfig, adapters: PlatformAdapters): 
     connectStorageEmulator(storage, host, 9199);
   }
 
+  // Dados sempre direto no Firestore (instantâneo, sem depender do servidor acordado).
+  // O servidor, quando configurado, é usado só para o que exige segredo: tokens de voz.
   const hasServer = Boolean(config.apiBaseUrl);
-  const api: NoxApi = hasServer
-    ? new ApiClient(config.apiBaseUrl, async () => {
-        const user = auth.currentUser;
-        if (!user) throw new Error('não autenticado');
-        return user.getIdToken();
-      })
-    : new DirectApi(db, auth);
+  const server = hasServer
+    ? new ApiClient(
+        config.apiBaseUrl,
+        async () => {
+          const user = auth.currentUser;
+          if (!user) throw new Error('não autenticado');
+          return user.getIdToken();
+        },
+        // Hospedagens gratuitas "dormem": o primeiro pedido pode levar ~1 min.
+        75_000,
+      )
+    : null;
+  // Acorda o servidor em segundo plano ao abrir o app, antes de alguém entrar numa sala.
+  if (hasServer) void fetch(`${config.apiBaseUrl.replace(/\/$/, '')}/healthz`).catch(() => undefined);
+  const api: NoxApi = new DirectApi(db, auth, server);
 
   current = { app, auth, db, rtdb, storage, api, hasServer, config };
   return current;

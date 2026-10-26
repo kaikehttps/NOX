@@ -1,16 +1,19 @@
-# Blueprint do Render para o nox-api (plano gratuito).
-# Dashboard → New → Blueprint → escolha este repositório. Os valores `sync: false` são pedidos na criação.
+# Blueprint do Render para o nox-api (plano gratuito, sem cartão).
+# Render → New → Blueprint → escolha este repositório. Os valores `sync: false` são pedidos na criação.
+# O app usa este servidor apenas para tokens de voz (segredo do LiveKit); o resto é direto no Firestore.
 services:
   - type: web
     name: nox-api
-    runtime: docker
-    dockerfilePath: ./services/api/Dockerfile
-    dockerContext: .
+    runtime: node
     plan: free
     region: oregon
+    buildCommand: npm ci --ignore-scripts --workspace @nox/api --include-workspace-root=false && npm run build -w @nox/api
+    startCommand: node services/api/dist/server.mjs
     healthCheckPath: /healthz
     autoDeploy: true
     envVars:
+      - key: NODE_VERSION
+        value: "22"
       - key: FIREBASE_PROJECT_ID
         value: noxxxxx
       - key: FIREBASE_SERVICE_ACCOUNT_JSON

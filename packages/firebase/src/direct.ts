@@ -86,6 +86,8 @@ export class DirectApi implements NoxApi {
   constructor(
     private readonly db: Firestore,
     private readonly auth: Auth,
+    /** Servidor do NOX, usado apenas para tokens de voz. */
+    private readonly server: ApiClient | null = null,
   ) {}
 
   private get me(): string {
@@ -479,8 +481,9 @@ export class DirectApi implements NoxApi {
 
   /* ───────────── voz e conta ───────────── */
 
-  voiceToken = async (_req: VoiceTokenRequest): Promise<VoiceGrant> => {
-    throw new ApiClientError(503, 'voice_not_configured', 'A voz precisa do servidor do NOX, que ainda não está no ar.');
+  voiceToken = async (req: VoiceTokenRequest): Promise<VoiceGrant> => {
+    if (!this.server) throw new ApiClientError(503, 'voice_not_configured', 'A voz precisa do servidor do NOX, que ainda não está no ar.');
+    return this.server.voiceToken(req);
   };
 
   /**
