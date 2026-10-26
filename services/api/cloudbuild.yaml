@@ -1,0 +1,32 @@
+# Build + deploy do nox-api pelo Cloud Build. Executar da RAIZ do monorepo:
+#   gcloud builds submit --config services/api/cloudbuild.yaml \
+#     --substitutions=_REGION=southamerica-east1,_SERVICE=nox-api,_ENV=prod
+substitutions:
+  _REGION: southamerica-east1
+  _SERVICE: nox-api
+  _ENV: dev
+  _REPO: nox
+images:
+  - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_SERVICE}:${BUILD_ID}
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args: ['build', '-f', 'services/api/Dockerfile', '-t', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_SERVICE}:${BUILD_ID}', '.']
+  - name: gcr.io/cloud-builders/docker
+    args: ['push', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_SERVICE}:${BUILD_ID}']
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_SERVICE}:${BUILD_ID}
+      - --region=${_REGION}
+      - --service-account=nox-api@${PROJECT_ID}.iam.gserviceaccount.com
+      - --allow-unauthenticated
+      - --min-instances=0
+      - --max-instances=5
+      - --cpu=1
+      - --memory=512Mi
+      - --concurrency=80
+      - --set-env-vars=FIREBASE_PROJECT_ID=${PROJECT_ID},NOX_ENV=${_ENV}
+      - --set-secrets=LIVEKIT_URL=livekit-url:latest,LIVEKIT_API_KEY=livekit-api-key:latest,LIVEKIT_API_SECRET=livekit-api-secret:latest

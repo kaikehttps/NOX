@@ -1,0 +1,52 @@
+{
+  "name": "nox",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "NOX — Seu grupo. Sua frequência.",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "services/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev:desktop": "npm run dev -w @nox/desktop",
+    "dev:web": "npm run dev:web -w @nox/desktop",
+    "dev:mobile": "npm run start -w @nox/mobile",
+    "dev:api": "npm run dev -w @nox/api",
+    "emulators": "firebase emulators:start --project demo-nox --import=./.emulator-data --export-on-exit",
+    "brand": "node scripts/generate-brand-assets.mjs",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "vitest run --project unit",
+    "test:rules": "firebase emulators:exec --project demo-nox --only firestore,storage,database \"vitest run --project rules\"",
+    "test:api": "firebase emulators:exec --project demo-nox --only auth,firestore,database \"vitest run --project api\"",
+    "test:all": "firebase emulators:exec --project demo-nox --only auth,firestore,storage,database \"vitest run\"",
+    "build:desktop": "npm run build -w @nox/desktop",
+    "dist:desktop": "npm run dist -w @nox/desktop",
+    "build:web": "npm run build:web -w @nox/desktop",
+    "deploy:web": "npm run build:web && firebase deploy --only hosting"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^6.0.0",
+    "@types/node": "^24.0.0",
+    "firebase": "^13.1.0",
+    "png-to-ico": "^3.0.2",
+    "sharp": "^0.35.5",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.5"
+  },
+  "allowScripts": {
+    "electron@45.0.0": true,
+    "esbuild@0.28.2": true,
+    "electron-winstaller@5.4.0": true,
+    "@firebase/util": false,
+    "protobufjs": false
+  },
+  "overrides": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  }
+}

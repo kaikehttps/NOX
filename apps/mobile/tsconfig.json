@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["ES2023", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "customConditions": ["react-native"],
+    "allowJs": false,
+    "types": []
+  },
+  "include": ["app", "src", "index.ts", "app.config.ts", "src/types/*.d.ts"],
+  "exclude": ["node_modules", "android", "ios", "dist"]
+}

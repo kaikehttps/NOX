@@ -1,0 +1,35 @@
+node_modules/
+dist/
+out/
+release/
+build/
+.expo/
+.vite/
+coverage/
+*.log
+.DS_Store
+Thumbs.db
+
+# Ambiente — nunca versionar credenciais
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+service-account*.json
+google-services.json
+GoogleService-Info.plist
+
+# Emuladores
+.emulator-data/
+firebase-debug.log
+firestore-debug.log
+database-debug.log
+storage-debug.log
+ui-debug.log
+
+# Mobile nativo gerado pelo prebuild
+apps/mobile/android/
+apps/mobile/ios/
+**/e2e/shots/

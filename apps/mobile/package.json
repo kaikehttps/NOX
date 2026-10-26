@@ -1,0 +1,50 @@
+{
+  "name": "@nox/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start --dev-client",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "prebuild": "expo prebuild",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@config-plugins/react-native-webrtc": "^15.0.2",
+    "@expo-google-fonts/geist": "^0.4.2",
+    "@expo-google-fonts/geist-mono": "^0.4.3",
+    "@livekit/react-native": "^3.1.0",
+    "@livekit/react-native-expo-plugin": "^1.1.0",
+    "@livekit/react-native-webrtc": "^150.1.1",
+    "@nox/design-system": "*",
+    "@nox/firebase": "*",
+    "@nox/realtime": "*",
+    "@nox/shared": "*",
+    "@nox/validation": "*",
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-google-signin/google-signin": "^16.1.5",
+    "expo": "~58.0.19",
+    "expo-build-properties": "~58.0.11",
+    "expo-clipboard": "~58.0.4",
+    "expo-constants": "~58.0.13",
+    "expo-dev-client": "~58.0.15",
+    "expo-font": "~58.0.10",
+    "expo-haptics": "~58.0.7",
+    "expo-linking": "~58.0.14",
+    "expo-router": "~58.0.26",
+    "expo-splash-screen": "~58.0.11",
+    "expo-status-bar": "~58.0.4",
+    "expo-system-ui": "~58.0.6",
+    "firebase": "^13.1.0",
+    "livekit-client": "^2.23.0",
+    "react": "19.3.0",
+    "react-native": "0.88.0",
+    "react-native-safe-area-context": "~5.10.1",
+    "react-native-screens": "~4.30.0",
+    "react-native-svg": "15.16.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0"
+  }
+}

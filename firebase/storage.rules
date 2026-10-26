@@ -1,0 +1,98 @@
+rules_version = '2';
+
+// NOX — regras do Firebase Storage.
+// Arquivos privados nunca são públicos: toda leitura exige autenticação e
+// participação verificada no Firestore (regras entre serviços).
+// Limites espelham packages/shared/src/limits.ts (upload.*).
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function rank(role) {
+      return {'member': 0, 'moderator': 1, 'admin': 2, 'owner': 3}[role];
+    }
+
+    function memberDoc(cid) {
+      return /databases/(default)/documents/communities/$(cid)/members/$(request.auth.uid);
+    }
+
+    function isMember(cid) {
+      return signedIn() && firestore.exists(memberDoc(cid));
+    }
+
+    function myRank(cid) {
+      return rank(firestore.get(memberDoc(cid)).data.role);
+    }
+
+    function canOnChannel(cid, chid, op) {
+      let access = firestore.get(/databases/(default)/documents/communities/$(cid)/channels/$(chid)).data.access;
+      let r = myRank(cid);
+      return r >= rank(access.view) && r >= rank(access[op]);
+    }
+
+    function isConversationMember(convId) {
+      return signedIn()
+        && request.auth.uid in firestore.get(/databases/(default)/documents/conversations/$(convId)).data.memberIds;
+    }
+
+    function isImage() {
+      return request.resource.contentType.matches('image/(png|jpeg|webp|gif)');
+    }
+
+    // Tipos aceitos em anexos. Executáveis e HTML ficam de fora.
+    function isSafeAttachment() {
+      let ct = request.resource.contentType;
+      return ct.matches('image/(png|jpeg|webp|gif|avif)')
+        || ct.matches('video/(mp4|webm|quicktime)')
+        || ct.matches('audio/(mpeg|ogg|wav|webm|mp4|aac|flac)')
+        || ct.matches('application/(pdf|zip|x-zip-compressed|x-7z-compressed|json)')
+        || ct.matches('text/plain');
+    }
+
+    // Avatares: leitura por usuários autenticados; escrita apenas pelo dono.
+    match /avatars/{uid}/{file} {
+      allow read: if signedIn();
+      allow write: if signedIn() && request.auth.uid == uid
+        && request.resource.size < 4 * 1024 * 1024
+        && isImage();
+      allow delete: if signedIn() && request.auth.uid == uid;
+    }
+
+    // Ícones de comunidade: membros leem; admin+ escreve.
+    match /communities/{cid}/icon/{file} {
+      allow read: if isMember(cid);
+      allow write: if isMember(cid) && myRank(cid) >= rank('admin')
+        && request.resource.size < 4 * 1024 * 1024
+        && isImage();
+    }
+
+    // Anexos de conversas privadas.
+    match /attachments/conversations/{convId}/{uid}/{fileId}/{name} {
+      allow read: if isConversationMember(convId);
+      allow create: if isConversationMember(convId)
+        && request.auth.uid == uid
+        && request.resource.size < 50 * 1024 * 1024
+        && isSafeAttachment();
+      allow delete: if signedIn() && request.auth.uid == uid;
+    }
+
+    // Anexos de canais de comunidade.
+    match /attachments/channels/{cid}/{chid}/{uid}/{fileId}/{name} {
+      allow read: if isMember(cid) && canOnChannel(cid, chid, 'view');
+      allow create: if isMember(cid)
+        && request.auth.uid == uid
+        && canOnChannel(cid, chid, 'attach')
+        && request.resource.size < 50 * 1024 * 1024
+        && isSafeAttachment();
+      allow delete: if signedIn() && (request.auth.uid == uid || myRank(cid) >= rank('moderator'));
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

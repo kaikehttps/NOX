@@ -1,0 +1,671 @@
+/* ───────────── chanfro da marca ───────────── */
+.chamfer {
+  --c: 6px;
+  clip-path: polygon(var(--c) 0, 100% 0, 100% calc(100% - var(--c)), calc(100% - var(--c)) 100%, 0 100%, 0 var(--c));
+}
+
+/* ───────────── botões ───────────── */
+.btn {
+  --c: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--nox-border);
+  background: var(--nox-elevated);
+  color: var(--nox-text);
+  font-size: var(--nox-fs-small);
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background var(--nox-fast) var(--nox-ease), border-color var(--nox-fast) var(--nox-ease), color var(--nox-fast);
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--nox-border-strong);
+  background: var(--nox-surface);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+}
+
+.btn.primary {
+  background: var(--nox-accent);
+  border-color: var(--nox-accent);
+  color: var(--nox-on-accent);
+  font-weight: 600;
+  clip-path: polygon(var(--c) 0, 100% 0, 100% calc(100% - var(--c)), calc(100% - var(--c)) 100%, 0 100%, 0 var(--c));
+}
+
+.btn.primary:hover:not(:disabled) {
+  background: var(--nox-accent);
+  filter: brightness(1.08);
+}
+
+.btn.danger {
+  border-color: color-mix(in srgb, var(--nox-danger) 50%, transparent);
+  color: var(--nox-danger);
+  background: transparent;
+}
+
+.btn.danger:hover:not(:disabled) {
+  background: var(--nox-danger-tint);
+}
+
+.btn.ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--nox-text-muted);
+}
+
+.btn.ghost:hover:not(:disabled) {
+  color: var(--nox-text);
+  background: var(--nox-elevated);
+  border-color: transparent;
+}
+
+.btn.lg {
+  height: 42px;
+  padding: 0 22px;
+  font-size: var(--nox-fs-body);
+}
+
+.btn.block {
+  width: 100%;
+}
+
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  color: var(--nox-text-muted);
+  border: 1px solid transparent;
+  transition: color var(--nox-fast), background var(--nox-fast);
+}
+
+.icon-btn:hover:not(:disabled) {
+  color: var(--nox-text);
+  background: var(--nox-elevated);
+}
+
+.icon-btn.active {
+  color: var(--nox-accent);
+}
+
+.icon-btn.alert {
+  color: var(--nox-danger);
+  background: var(--nox-danger-tint);
+}
+
+.icon-btn:disabled {
+  opacity: 0.35;
+}
+
+/* ───────────── campos ───────────── */
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field > .label {
+  color: var(--nox-text-muted);
+}
+
+.input {
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  background: var(--nox-bg);
+  border: 1px solid var(--nox-border);
+  color: var(--nox-text);
+  outline: none;
+  user-select: text;
+  transition: border-color var(--nox-fast);
+}
+
+textarea.input {
+  height: auto;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.input:focus {
+  border-color: var(--nox-accent);
+}
+
+.input::placeholder {
+  color: var(--nox-text-faint);
+}
+
+.input-prefix {
+  display: flex;
+  align-items: center;
+  background: var(--nox-bg);
+  border: 1px solid var(--nox-border);
+}
+
+.input-prefix:focus-within {
+  border-color: var(--nox-accent);
+}
+
+.input-prefix > span {
+  padding-left: 10px;
+  color: var(--nox-accent);
+  font-family: var(--nox-font-mono);
+}
+
+.input-prefix > .input {
+  border: 0;
+  background: transparent;
+}
+
+.hint {
+  font-size: var(--nox-fs-small);
+  color: var(--nox-text-faint);
+}
+
+.error-line {
+  font-size: var(--nox-fs-small);
+  color: var(--nox-danger);
+  font-family: var(--nox-font-mono);
+}
+
+.error-line::before {
+  content: '✕ ';
+}
+
+.ok-line {
+  font-size: var(--nox-fs-small);
+  color: var(--nox-accent);
+  font-family: var(--nox-font-mono);
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--nox-border);
+}
+
+.switch {
+  position: relative;
+  width: 34px;
+  height: 18px;
+  border: 1px solid var(--nox-border-strong);
+  background: var(--nox-bg);
+  flex: none;
+  transition: background var(--nox-fast), border-color var(--nox-fast);
+}
+
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  background: var(--nox-text-faint);
+  transition: transform var(--nox-base) var(--nox-ease-out), background var(--nox-fast);
+}
+
+.switch[aria-checked='true'] {
+  border-color: var(--nox-accent);
+  background: var(--nox-accent-tint);
+}
+
+.switch[aria-checked='true']::after {
+  transform: translateX(16px);
+  background: var(--nox-accent);
+}
+
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--nox-border);
+}
+
+.segmented > button {
+  padding: 6px 12px;
+  font-size: var(--nox-fs-small);
+  color: var(--nox-text-muted);
+  font-family: var(--nox-font-mono);
+}
+
+.segmented > button + button {
+  border-left: 1px solid var(--nox-border);
+}
+
+.segmented > button[aria-pressed='true'] {
+  background: var(--nox-accent-tint);
+  color: var(--nox-accent);
+}
+
+input[type='range'] {
+  accent-color: var(--nox-accent);
+  width: 100%;
+}
+
+select.input {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--nox-text-faint) 50%), linear-gradient(135deg, var(--nox-text-faint) 50%, transparent 50%);
+  background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 28px;
+}
+
+/* ───────────── avatar ───────────── */
+.avatar {
+  --c: 22%;
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  overflow: visible;
+}
+
+.avatar > .face {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: var(--nox-text);
+  font-family: var(--nox-font-mono);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  clip-path: polygon(var(--c) 0, 100% 0, 100% calc(100% - var(--c)), calc(100% - var(--c)) 100%, 0 100%, 0 var(--c));
+  overflow: hidden;
+}
+
+.avatar > .face > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar.speaking > .face {
+  box-shadow: inset 0 0 0 2px var(--nox-accent);
+}
+
+.status-dot {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  width: 11px;
+  height: 11px;
+  border: 2.5px solid var(--status-ring, var(--nox-nav));
+  background: var(--nox-offline);
+}
+
+.status-dot.online {
+  background: var(--nox-accent);
+}
+
+.status-dot.idle {
+  background: var(--nox-idle);
+}
+
+.status-dot.dnd {
+  background: var(--nox-dnd);
+}
+
+/* ───────────── chips e badges ───────────── */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 20px;
+  padding: 0 7px;
+  border: 1px solid var(--nox-border);
+  font-family: var(--nox-font-mono);
+  font-size: var(--nox-fs-micro);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--nox-text-muted);
+  white-space: nowrap;
+}
+
+.chip.live {
+  color: var(--nox-accent);
+  border-color: color-mix(in srgb, var(--nox-accent) 40%, transparent);
+  background: var(--nox-accent-tint);
+}
+
+.chip.warn {
+  color: var(--nox-warning);
+  border-color: color-mix(in srgb, var(--nox-warning) 40%, transparent);
+}
+
+.chip.bad {
+  color: var(--nox-danger);
+  border-color: color-mix(in srgb, var(--nox-danger) 40%, transparent);
+}
+
+.count-badge {
+  min-width: 18px;
+  height: 16px;
+  padding: 0 5px;
+  display: inline-grid;
+  place-items: center;
+  background: var(--nox-accent);
+  color: var(--nox-on-accent);
+  font: 600 10px/1 var(--nox-font-mono);
+}
+
+/* ───────────── modais ───────────── */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: var(--nox-overlay);
+  backdrop-filter: blur(2px);
+  animation: nox-fade-in var(--nox-base) var(--nox-ease-out);
+}
+
+.modal {
+  width: min(460px, calc(100vw - 48px));
+  max-height: calc(100vh - 96px);
+  display: flex;
+  flex-direction: column;
+  background: var(--nox-surface);
+  border: 1px solid var(--nox-border);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  animation: nox-fade-in var(--nox-base) var(--nox-ease-out);
+}
+
+.modal.wide {
+  width: min(820px, calc(100vw - 48px));
+  height: min(620px, calc(100vh - 96px));
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px 10px 16px;
+  border-bottom: 1px solid var(--nox-border);
+}
+
+.modal-head .label {
+  color: var(--nox-text-muted);
+}
+
+.modal-body {
+  padding: 18px 16px;
+  overflow: auto;
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.modal-body h2 {
+  margin: 0;
+  font-size: var(--nox-fs-title);
+  font-weight: 600;
+}
+
+.modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--nox-border);
+  background: var(--nox-nav);
+}
+
+/* ───────────── menu de contexto ───────────── */
+.menu {
+  position: fixed;
+  z-index: 60;
+  min-width: 200px;
+  padding: 4px;
+  background: var(--nox-elevated);
+  border: 1px solid var(--nox-border-strong);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  animation: nox-fade-in var(--nox-fast) var(--nox-ease-out);
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 8px;
+  font-size: var(--nox-fs-small);
+  color: var(--nox-text);
+  text-align: left;
+}
+
+.menu-item:hover:not(:disabled),
+.menu-item:focus-visible {
+  background: var(--nox-accent-tint);
+  color: var(--nox-accent);
+  outline: none;
+}
+
+.menu-item.danger {
+  color: var(--nox-danger);
+}
+
+.menu-item.danger:hover {
+  background: var(--nox-danger-tint);
+  color: var(--nox-danger);
+}
+
+.menu-item .kbd {
+  margin-left: auto;
+}
+
+.menu-sep {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--nox-border);
+}
+
+.menu-reactions {
+  display: flex;
+  gap: 2px;
+  padding: 2px 2px 6px;
+  border-bottom: 1px solid var(--nox-border);
+  margin-bottom: 4px;
+}
+
+.menu-reactions button {
+  width: 30px;
+  height: 30px;
+  font-size: 17px;
+}
+
+.menu-reactions button:hover {
+  background: var(--nox-surface);
+}
+
+.kbd {
+  font-family: var(--nox-font-mono);
+  font-size: var(--nox-fs-micro);
+  color: var(--nox-text-faint);
+  border: 1px solid var(--nox-border);
+  padding: 1px 4px;
+}
+
+/* ───────────── toasts ───────────── */
+.toasts {
+  position: fixed;
+  right: 16px;
+  top: 48px;
+  z-index: 70;
+  display: grid;
+  gap: 8px;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 260px;
+  max-width: 380px;
+  padding: 10px 12px;
+  background: var(--nox-elevated);
+  border: 1px solid var(--nox-border-strong);
+  border-left: 2px solid var(--nox-accent);
+  font-size: var(--nox-fs-small);
+  animation: nox-fade-in var(--nox-base) var(--nox-ease-out);
+}
+
+.toast.error {
+  border-left-color: var(--nox-danger);
+}
+
+/* ───────────── estados vazios ───────────── */
+.empty {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 40px 24px;
+  text-align: center;
+  color: var(--nox-text-muted);
+}
+
+.empty .glyph {
+  font-family: var(--nox-font-mono);
+  color: var(--nox-text-faint);
+  font-size: var(--nox-fs-small);
+  letter-spacing: 0.1em;
+}
+
+.empty p {
+  margin: 0;
+  max-width: 340px;
+}
+
+/* ───────────── carregamento (sinal da marca) ───────────── */
+.signal-loader {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 14px;
+}
+
+.signal-loader > i {
+  width: 3px;
+  background: var(--nox-accent);
+  animation: nox-signal 900ms var(--nox-ease) infinite;
+}
+
+.signal-loader > i:nth-child(2) {
+  animation-delay: 120ms;
+}
+
+.signal-loader > i:nth-child(3) {
+  animation-delay: 240ms;
+}
+
+@keyframes nox-signal {
+  0%,
+  100% {
+    height: 30%;
+    opacity: 0.5;
+  }
+  50% {
+    height: 100%;
+    opacity: 1;
+  }
+}
+
+.logo-signal-blink {
+  animation: nox-blink 1100ms steps(1) infinite;
+}
+
+/* ───────────── abas ───────────── */
+.tabs {
+  display: flex;
+  gap: 2px;
+}
+
+.tab {
+  padding: 5px 10px;
+  font-size: var(--nox-fs-small);
+  color: var(--nox-text-muted);
+  border: 1px solid transparent;
+}
+
+.tab:hover {
+  color: var(--nox-text);
+  background: var(--nox-elevated);
+}
+
+.tab[aria-selected='true'] {
+  color: var(--nox-accent);
+  border-color: color-mix(in srgb, var(--nox-accent) 35%, transparent);
+  background: var(--nox-accent-tint);
+}
+
+.tab .count-badge {
+  margin-left: 6px;
+}
+
+/* ───────────── emoji picker compacto ───────────── */
+.emoji-picker {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  z-index: 40;
+  width: 340px;
+  height: 340px;
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  background: var(--nox-elevated);
+  border: 1px solid var(--nox-border-strong);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+  animation: nox-fade-in var(--nox-fast) var(--nox-ease-out);
+}
+
+.emoji-picker .search {
+  padding: 8px;
+  border-bottom: 1px solid var(--nox-border);
+}
+
+.emoji-picker .cats {
+  display: flex;
+  gap: 2px;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--nox-border);
+}
+
+.emoji-picker .cats button {
+  padding: 3px 6px;
+  font-family: var(--nox-font-mono);
+  font-size: var(--nox-fs-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--nox-text-faint);
+}
+
+.emoji-picker .cats button[aria-pressed='true'] {
+  color: var(--nox-accent);
+}
+
+.emoji-picker .grid {
+  overflow: auto;
+  padding: 6px;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  align-content: start;
+}
+
+.emoji-picker .grid button {
+  height: 36px;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.emoji-picker .grid button:hover {
+  background: var(--nox-surface);
+}

@@ -1,0 +1,1195 @@
+/* ───────────── barra de título (região arrastável) ───────────── */
+.titlebar {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 calc(140px + 12px) 0 12px; /* espaço para os controles nativos da janela */
+  background: var(--nox-bg);
+  border-bottom: 1px solid var(--nox-border);
+  -webkit-app-region: drag;
+  font-family: var(--nox-font-mono);
+  font-size: var(--nox-fs-label);
+  color: var(--nox-text-faint);
+  letter-spacing: 0.04em;
+}
+
+html[data-platform='web'] .titlebar {
+  padding-right: 12px;
+}
+
+html[data-platform='darwin'] .titlebar {
+  padding-left: 84px;
+  padding-right: 12px;
+}
+
+.titlebar .path {
+  color: var(--nox-text-muted);
+}
+
+.titlebar .path b {
+  color: var(--nox-text);
+  font-weight: 500;
+}
+
+.titlebar .spacer {
+  flex: 1;
+}
+
+.titlebar button,
+.titlebar .no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* ───────────── shell ───────────── */
+.app {
+  height: 100%;
+  display: grid;
+  grid-template-rows: 36px 1fr;
+}
+
+.shell {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: var(--nox-rail-w) var(--nox-sidebar-w) 1fr auto;
+}
+
+/* ───────────── trilho de comunidades ───────────── */
+.rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+  background: var(--nox-bg);
+  border-right: 1px solid var(--nox-border);
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.rail-item {
+  --c: 9px;
+  position: relative;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  background: var(--nox-elevated);
+  color: var(--nox-text-muted);
+  font-family: var(--nox-font-mono);
+  font-size: var(--nox-fs-small);
+  font-weight: 600;
+  clip-path: polygon(var(--c) 0, 100% 0, 100% calc(100% - var(--c)), calc(100% - var(--c)) 100%, 0 100%, 0 var(--c));
+  transition: background var(--nox-fast), color var(--nox-fast);
+}
+
+.rail-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.rail-item:hover {
+  background: var(--nox-border);
+  color: var(--nox-text);
+}
+
+.rail-item.active {
+  background: var(--nox-accent);
+  color: var(--nox-on-accent);
+}
+
+.rail-slot {
+  position: relative;
+  width: 100%;
+  display: grid;
+  place-items: center;
+}
+
+/* Indicador de item ativo: barra vertical à esquerda, como um cursor. */
+.rail-slot::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 3px;
+  height: 0;
+  background: var(--nox-accent);
+  transition: height var(--nox-base) var(--nox-ease-out);
+}
+
+.rail-slot.active::before {
+  height: 24px;
+}
+
+.rail-slot.unread::before {
+  height: 6px;
+  background: var(--nox-text);
+}
+
+.rail-sep {
+  width: 24px;
+  height: 1px;
+  background: var(--nox-border);
+  margin: 2px 0;
+}
+
+.rail-home {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  color: var(--nox-accent);
+}
+
+.rail-home svg {
+  width: 26px;
+  height: 26px;
+}
+
+.rail-add {
+  color: var(--nox-accent);
+  background: transparent;
+  border: 1px dashed var(--nox-border-strong);
+  clip-path: none;
+}
+
+.rail-add:hover {
+  border-color: var(--nox-accent);
+  background: var(--nox-accent-tint);
+  color: var(--nox-accent);
+}
+
+/* ───────────── barra lateral ───────────── */
+.sidebar {
+  min-height: 0;
+  min-width: 0;
+  display: grid;
+  /* minmax(0,…): textos nowrap não podem alargar a coluna além da largura da lateral */
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto 1fr auto auto;
+  background: var(--nox-nav);
+  border-right: 1px solid var(--nox-border);
+}
+
+.panel-head {
+  height: var(--nox-header-h);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px 0 14px;
+  border-bottom: 1px solid var(--nox-border);
+}
+
+.panel-head .title {
+  font-weight: 600;
+  font-size: var(--nox-fs-body);
+}
+
+.panel-head .path {
+  font-family: var(--nox-font-mono);
+  font-size: var(--nox-fs-micro);
+  color: var(--nox-text-faint);
+}
+
+.sidebar-scroll {
+  overflow-y: auto;
+  padding: 8px 8px 16px;
+}
+
+.section-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 6px 6px;
+}
+
+.section-label:first-child {
+  padding-top: 4px;
+}
+
+.section-label button {
+  color: var(--nox-text-faint);
+}
+
+.section-label button:hover {
+  color: var(--nox-accent);
+}
+
+.nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 32px;
+  padding: 4px 8px;
+  color: var(--nox-text-muted);
+  text-align: left;
+  font-size: var(--nox-fs-body);
+  transition: background var(--nox-fast), color var(--nox-fast);
+}
+
+.nav-item:hover {
+  background: var(--nox-elevated);
+  color: var(--nox-text);
+}
+
+.nav-item.active {
+  background: var(--nox-elevated);
+  color: var(--nox-text);
+}
+
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  background: var(--nox-accent);
+  animation: nox-fade-in var(--nox-base) var(--nox-ease-out);
+}
+
+.nav-item.unread {
+  color: var(--nox-text);
+  font-weight: 600;
+}
+
+.nav-item .glyph {
+  width: 16px;
+  text-align: center;
+  font-family: var(--nox-font-mono);
+  color: var(--nox-text-faint);
+  flex: none;
+}
+
+.nav-item.active .glyph {
+  color: var(--nox-accent);
+}
+
+.nav-item .meta {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nav-item .sub {
+  display: block;
+  font-size: var(--nox-fs-small);
+  color: var(--nox-text-faint);
+  font-weight: 400;
+}
+
+.voice-occupants {
+  display: grid;
+  gap: 2px;
+  padding: 2px 0 6px 32px;
+}
+
+.voice-occupant {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--nox-fs-small);
+  color: var(--nox-text-muted);
+  padding: 2px 4px;
+}
+
+.voice-occupant.speaking {
+  color: var(--nox-text);
+}
+
+/* ───────────── painel do usuário ───────────── */
+.me-panel {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 8px 8px 10px;
+  border-top: 1px solid var(--nox-border);
+  background: var(--nox-bg);
+  --status-ring: var(--nox-bg);
+}
+
+.me-panel .who {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.25;
+  text-align: left;
+  padding: 2px 4px;
+}
+
+.me-panel .who:hover {
+  background: var(--nox-elevated);
+}
+
+.me-panel .name {
+  font-size: var(--nox-fs-small);
+  font-weight: 600;
+}
+
+.me-panel .handle {
+  font-family: var(--nox-font-mono);
+  font-size: var(--nox-fs-micro);
+  color: var(--nox-text-faint);
+}
+
+/* ───────────── dock de voz persistente ───────────── */
+.voice-dock {
+  border-top: 1px solid var(--nox-border);
+  background: var(--nox-surface);
+  padding: 10px 10px 8px;
+  display: grid;
+  gap: 8px;
+  animation: nox-fade-in var(--nox-base) var(--nox-ease-out);
+}
+
+.voice-dock .status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--nox-font-mono);
+  font-size: var(--nox-fs-label);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.voice-dock .status.connected {
+  color: var(--nox-accent);
+}
+
+.voice-dock .status.connecting,
+.voice-dock .status.reconnecting {
+  color: var(--nox-warning);
+}
+
+.voice-dock .status.failed,
+.voice-dock .status.disconnected {
+  color: var(--nox-danger);
+}
+
+.voice-dock .where {
+  font-size: var(--nox-fs-small);
+  color: var(--nox-text-muted);
+  text-align: left;
+}
+
+.voice-dock .where:hover {
+  color: var(--nox-text);
+  text-decoration: underline;
+}
+
+.voice-dock .controls {
+  display: flex;
+  gap: 4px;
+}
+
+.voice-dock .controls .icon-btn {
+  flex: 1;
+  height: 30px;
+  border: 1px solid var(--nox-border);
+}
+
+.voice-dock .controls .leave {
+  color: var(--nox-danger);
+}
+
+.voice-dock .controls .btn {
+  flex: 1;
+}
+
+.voice-dock .controls .btn + .icon-btn {
+  flex: 0 0 34px;
+}
+
+.voice-dock .controls .leave:hover {
+  background: var(--nox-danger-tint);
+}
+
+/* ───────────── área principal ───────────── */
+.main {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: var(--nox-header-h) 1fr;
+  background: var(--nox-bg);
+}
+
+.main-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px 0 16px;
+  border-bottom: 1px solid var(--nox-border);
+  min-width: 0;
+}
+
+.main-head .name {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.main-head .glyph {
+  font-family: var(--nox-font-mono);
+  color: var(--nox-text-faint);
+}
+
+.main-head .topic {
+  color: var(--nox-text-faint);
+  font-size: var(--nox-fs-small);
+  padding-left: 10px;
+  border-left: 1px solid var(--nox-border);
+}
+
+.main-head .actions {
+  margin-left: auto;
+  display: flex;
+  gap: 2px;
+}
+
+.main-body {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 1fr auto;
+}
+
+/* ───────────── mensagens ───────────── */
+.messages {
+  overflow-y: auto;
+  overflow-anchor: none;
+  display: flex;
+  flex-direction: column-reverse; /* âncora no fim: novas mensagens ficam visíveis */
+  padding: 8px 0 12px;
+  user-select: text;
+}
+
+.messages-inner {
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-intro {
+  padding: 32px 20px 20px;
+  display: grid;
+  gap: 6px;
+}
+
+.chat-intro h1 {
+  margin: 0;
+  font-size: var(--nox-fs-heading);
+  font-weight: 600;
+}
+
+.chat-intro .prompt {
+  font-family: var(--nox-font-mono);
+  font-size: var(--nox-fs-small);
+  color: var(--nox-text-faint);
+}
+
+.load-older {
+  align-self: center;
+  margin: 8px;
+}
+
+.day-sep {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 20px 6px;
+}
+
+.day-sep::before,
+.day-sep::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--nox-border);
+}
+
+.msg {
+  position: relative;
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  column-gap: 12px;
+  padding: 2px 20px 2px 16px;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 44px;
+}
+
+.msg.head {
+  margin-top: 10px;
+  padding-top: 4px;
+}
+
+.msg:hover,
+.msg.menu-open {
+  background: var(--nox-surface);
+}
+
+.msg.mentioned {
+  background: var(--nox-accent-tint);
+  box-shadow: inset 2px 0 0 var(--nox-accent);
+}
+
+.msg .gutter {
+  font-family: var(--nox-font-mono);
+  font-size: var(--nox-fs-micro);
+  color: transparent;
+  text-align: right;
+  padding-top: 4px;
+}
+
+.msg:hover .gutter {
+  color: var(--nox-text-faint);
+}
+
+.msg .head-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.msg .author {
+  font-weight: 600;
+  color: var(--nox-text);
+}
+
+.msg .author:hover {
+  text-decoration: underline;
+}
+
+.msg .time {
+  font-family: var(--nox-font-mono);
+  font-size: var(--nox-fs-micro);
+  color: var(--nox-text-faint);
+}
+
+.msg .text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--nox-text);
+  line-height: 1.5;
+}
+
+.msg.pending .text {
+  color: var(--nox-text-muted);
+}
+
+.msg .edited {
+  font-size: var(--nox-fs-micro);
+  color: var(--nox-text-faint);
+  margin-left: 4px;
+}
+
+.msg .mention {
+  color: var(--nox-accent);
+  background: var(--nox-accent-tint);
+  padding: 0 3px;
+}
+
+.msg .reply-ref {
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--nox-fs-small);
+  color: var(--nox-text-faint);
+  margin-bottom: 2px;
+}
+
+.msg .reply-ref::before {
+  content: '┌─';
+  font-family: var(--nox-font-mono);
+  color: var(--nox-border-strong);
+}
+
+.msg .reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.reaction {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 7px;
+  border: 1px solid var(--nox-border);
+  background: var(--nox-nav);
+  font-size: 14px;
+  transition: border-color var(--nox-fast), background var(--nox-fast);
+}
+
+.reaction .n {
+  font-family: var(--nox-font-mono);
+  font-size: var(--nox-fs-micro);
+  color: var(--nox-text-muted);
+}
+
+.reaction.mine {
+  border-color: color-mix(in srgb, var(--nox-accent) 55%, transparent);
+  background: var(--nox-accent-tint);
+}
+
+.reaction.mine .n {
+  color: var(--nox-accent);
+}
+
+.reaction.pop {
+  animation: nox-pop var(--nox-slow) var(--nox-ease-out);
+}
+
+.reaction:hover {
+  border-color: var(--nox-border-strong);
+}
+
+.msg .hover-actions {
+  position: absolute;
+  top: -14px;
+  right: 16px;
+  display: none;
+  background: var(--nox-elevated);
+  border: 1px solid var(--nox-border);
+}
+
+.msg:hover .hover-actions {
+  display: flex;
+}
+
+.msg .hover-actions .icon-btn {
+  width: 28px;
+  height: 28px;
+}
+
+.msg-failed {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 20px 0 68px;
+  font-size: var(--nox-fs-small);
+}
+
+.edit-box {
+  display: grid;
+  gap: 4px;
+}
+
+.edit-box .hint .kbd {
+  margin: 0 2px;
+}
+
+/* ───────────── compositor ───────────── */
+.composer-wrap {
+  position: relative;
+  padding: 0 16px 14px;
+}
+
+.composer-reply {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  font-size: var(--nox-fs-small);
+  color: var(--nox-text-muted);
+  background: var(--nox-surface);
+  border: 1px solid var(--nox-border);
+  border-bottom: 0;
+}
+
+.composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 6px 6px 6px 12px;
+  background: var(--nox-surface);
+  border: 1px solid var(--nox-border);
+  transition: border-color var(--nox-fast);
+}
+
+.composer:focus-within {
+  border-color: var(--nox-border-strong);
+}
+
+.composer .prompt {
+  font-family: var(--nox-font-mono);
+  color: var(--nox-accent);
+  padding: 6px 0;
+  line-height: 1.45;
+}
+
+.composer textarea {
+  flex: 1;
+  resize: none;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--nox-text);
+  padding: 6px 0;
+  max-height: 40vh;
+  line-height: 1.45;
+  user-select: text;
+}
+
+.composer textarea::placeholder {
+  color: var(--nox-text-faint);
+}
+
+.composer-locked {
+  padding: 12px;
+  text-align: center;
+  font-family: var(--nox-font-mono);
+  font-size: var(--nox-fs-small);
+  color: var(--nox-text-faint);
+  border: 1px dashed var(--nox-border);
+}
+
+.composer-foot {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 2px 0;
+  font-family: var(--nox-font-mono);
+  font-size: var(--nox-fs-micro);
+  color: var(--nox-text-faint);
+  min-height: 18px;
+}
+
+/* ───────────── painel lateral direito ───────────── */
+.side-panel {
+  width: var(--nox-members-w);
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--nox-nav);
+  border-left: 1px solid var(--nox-border);
+  padding: 8px;
+}
+
+.member-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 5px 6px;
+  text-align: left;
+  color: var(--nox-text-muted);
+}
+
+.member-row:hover {
+  background: var(--nox-elevated);
+  color: var(--nox-text);
+}
+
+.member-row.offline {
+  opacity: 0.45;
+}
+
+.profile-card {
+  display: grid;
+  gap: 10px;
+  padding: 16px 8px;
+}
+
+.profile-card .name {
+  font-size: var(--nox-fs-title);
+  font-weight: 600;
+}
+
+/* ───────────── início (amigos) ───────────── */
+.home {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 20px 24px 40px;
+}
+
+.home-welcome {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--nox-border);
+}
+
+.home-welcome h1 {
+  margin: 4px 0 0;
+  font-size: var(--nox-fs-heading);
+  font-weight: 600;
+}
+
+.stat-row {
+  display: flex;
+  gap: 1px;
+  background: var(--nox-border);
+  border: 1px solid var(--nox-border);
+}
+
+.stat {
+  padding: 8px 14px;
+  background: var(--nox-surface);
+  min-width: 110px;
+}
+
+.stat .v {
+  font-family: var(--nox-font-mono);
+  font-size: var(--nox-fs-title);
+}
+
+.stat .v.live {
+  color: var(--nox-accent);
+}
+
+.add-friend {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0 18px;
+}
+
+.add-friend .input-prefix {
+  flex: 1;
+}
+
+.friend-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 8px;
+  border-top: 1px solid var(--nox-border);
+}
+
+.friend-row:hover {
+  background: var(--nox-surface);
+}
+
+.friend-row .info {
+  flex: 1;
+  min-width: 0;
+}
+
+.friend-row .info .name {
+  font-weight: 600;
+}
+
+.friend-row .info .sub {
+  font-family: var(--nox-font-mono);
+  font-size: var(--nox-fs-micro);
+  color: var(--nox-text-faint);
+}
+
+.friend-row .row-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.friend-row .row-actions .icon-btn {
+  border: 1px solid var(--nox-border);
+}
+
+/* ───────────── palco de voz ───────────── */
+.voice-stage {
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  padding: 20px;
+  gap: 16px;
+}
+
+.voice-stage .stage-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 10px;
+  align-content: start;
+}
+
+.tile {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  display: grid;
+  place-items: center;
+  background: var(--nox-surface);
+  border: 1px solid var(--nox-border);
+  transition: border-color var(--nox-base) var(--nox-ease), box-shadow var(--nox-base) var(--nox-ease);
+}
+
+.tile.speaking {
+  border-color: var(--nox-accent);
+  box-shadow: 0 0 0 1px var(--nox-accent), 0 0 24px rgba(var(--nox-accent-rgb), 0.12);
+}
+
+.tile .tile-name {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(100% - 16px);
+  padding: 2px 6px;
+  background: var(--nox-overlay);
+  font-size: var(--nox-fs-small);
+}
+
+.tile .tile-flags {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 4px;
+  color: var(--nox-danger);
+}
+
+.tile .tile-quality {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+}
+
+.level-bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 12px;
+}
+
+.level-bars > i {
+  width: 3px;
+  background: var(--nox-accent);
+  transition: height 80ms linear;
+}
+
+.stage-controls {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+}
+
+.stage-controls .btn {
+  min-width: 46px;
+}
+
+.stage-join {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 14px;
+  text-align: center;
+}
+
+.stage-join .who-here {
+  display: flex;
+  gap: -6px;
+}
+
+/* ───────────── entrada / autenticação ───────────── */
+.entry {
+  height: 100%;
+  display: grid;
+  grid-template-rows: 36px 1fr auto;
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 42%, rgba(var(--nox-accent-rgb), 0.05), transparent 70%),
+    var(--nox-bg);
+}
+
+.entry-center {
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.entry-card {
+  width: min(400px, 100%);
+  display: grid;
+  gap: 18px;
+  animation: nox-fade-in var(--nox-slow) var(--nox-ease-out);
+}
+
+.entry-mark {
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  text-align: center;
+}
+
+.entry-mark .symbol {
+  width: 76px;
+  height: 76px;
+}
+
+.entry-mark .wordmark {
+  width: 120px;
+  height: auto;
+  color: var(--nox-text);
+}
+
+.terminal-lines {
+  font-family: var(--nox-font-mono);
+  font-size: var(--nox-fs-small);
+  line-height: 1.8;
+  color: var(--nox-text-faint);
+  text-align: left;
+  border: 1px solid var(--nox-border);
+  background: var(--nox-nav);
+  padding: 10px 12px;
+}
+
+.terminal-lines .ok {
+  color: var(--nox-accent);
+}
+
+.terminal-lines .line {
+  opacity: 0;
+  animation: nox-line-in var(--nox-base) var(--nox-ease-out) forwards;
+}
+
+@keyframes nox-line-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.entry h1 {
+  margin: 0;
+  font-size: var(--nox-fs-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.entry-foot {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-top: 1px solid var(--nox-border);
+  font-family: var(--nox-font-mono);
+  font-size: var(--nox-fs-micro);
+  color: var(--nox-text-faint);
+  letter-spacing: 0.1em;
+}
+
+.divider-text {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.divider-text::before,
+.divider-text::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--nox-border);
+}
+
+.link-btn {
+  color: var(--nox-text-muted);
+  font-size: var(--nox-fs-small);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.link-btn:hover {
+  color: var(--nox-accent);
+}
+
+/* ───────────── configurações ───────────── */
+.settings {
+  display: grid;
+  grid-template-columns: 190px 1fr;
+  min-height: 0;
+  flex: 1;
+}
+
+.settings-nav {
+  border-right: 1px solid var(--nox-border);
+  background: var(--nox-nav);
+  padding: 10px 8px;
+  display: grid;
+  align-content: start;
+  gap: 2px;
+}
+
+.settings-pane {
+  overflow-y: auto;
+  padding: 20px 24px 32px;
+  display: grid;
+  gap: 18px;
+  align-content: start;
+}
+
+.settings-pane h3 {
+  margin: 0;
+  font-size: var(--nox-fs-title);
+  font-weight: 600;
+}
+
+.settings-group {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--nox-border);
+  background: var(--nox-surface);
+}
+
+.mic-meter {
+  height: 8px;
+  background: var(--nox-bg);
+  border: 1px solid var(--nox-border);
+  position: relative;
+  overflow: hidden;
+}
+
+.mic-meter > i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--nox-accent);
+  transition: width 60ms linear;
+}
+
+.swatches {
+  display: flex;
+  gap: 8px;
+}
+
+.swatch {
+  --c: 5px;
+  width: 26px;
+  height: 26px;
+  clip-path: polygon(var(--c) 0, 100% 0, 100% calc(100% - var(--c)), calc(100% - var(--c)) 100%, 0 100%, 0 var(--c));
+}
+
+.swatch[aria-pressed='true'] {
+  outline: 2px solid var(--nox-text);
+  outline-offset: 2px;
+}
+
+/* Densidade compacta */
+html[data-density='compact'] .msg.head {
+  margin-top: 4px;
+}
+
+html[data-density='compact'] .nav-item {
+  min-height: 28px;
+}
+
+/* Telas estreitas: o painel de membros recolhe primeiro. */
+@media (max-width: 1100px) {
+  .side-panel {
+    display: none;
+  }
+}

@@ -1,0 +1,300 @@
+rules_version = '2';
+
+// NOX — regras do Cloud Firestore.
+//
+// Princípios:
+// - Escritas que envolvem vários documentos ou terceiros (amizades, bloqueios,
+//   comunidades, canais, convites, papéis) são feitas apenas pela API (Admin SDK).
+// - O cliente escreve diretamente apenas: o próprio perfil, a reserva do nome de
+//   usuário, as próprias preferências e mensagens/reações/fixações.
+// - A hierarquia de papéis espelha packages/shared/src/permissions.ts (ROLE_RANK).
+// - Limites espelham packages/shared/src/limits.ts.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ───────────── utilitários ─────────────
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function rank(role) {
+      return {'member': 0, 'moderator': 1, 'admin': 2, 'owner': 3}[role];
+    }
+
+    function memberPath(cid) {
+      return /databases/$(database)/documents/communities/$(cid)/members/$(request.auth.uid);
+    }
+
+    function isMember(cid) {
+      return signedIn() && exists(memberPath(cid));
+    }
+
+    function myRank(cid) {
+      return rank(get(memberPath(cid)).data.role);
+    }
+
+    function channelData(cid, chid) {
+      return get(/databases/$(database)/documents/communities/$(cid)/channels/$(chid)).data;
+    }
+
+    // Toda operação no canal exige também permissão de visualização.
+    function canOnChannel(cid, chid, op) {
+      let r = myRank(cid);
+      let access = channelData(cid, chid).access;
+      return r >= rank(access.view) && r >= rank(access[op]);
+    }
+
+    function conversationData(convId) {
+      return get(/databases/$(database)/documents/conversations/$(convId)).data;
+    }
+
+    function isConversationMember(convId) {
+      return signedIn() && request.auth.uid in conversationData(convId).memberIds;
+    }
+
+    // ───────────── mensagens (comum a DMs e canais) ─────────────
+
+    function validText(t) {
+      return t is string && t.size() <= 4000;
+    }
+
+    function validReply(r) {
+      return r == null || (
+        r is map
+        && r.keys().hasOnly(['id', 'authorId', 'preview'])
+        && r.id is string && r.authorId is string
+        && r.preview is string && r.preview.size() <= 200
+      );
+    }
+
+    function validNewMessage() {
+      let m = request.resource.data;
+      return m.keys().hasOnly(['authorId', 'text', 'createdAt', 'editedAt', 'replyTo', 'mentions', 'attachments', 'reactions', 'pinned'])
+        && m.keys().hasAll(['authorId', 'text', 'createdAt', 'editedAt', 'replyTo', 'mentions', 'attachments', 'reactions', 'pinned'])
+        && m.authorId == request.auth.uid
+        && validText(m.text)
+        && m.createdAt == request.time
+        && m.editedAt == null
+        && validReply(m.replyTo)
+        && m.mentions is list && m.mentions.size() <= 50
+        && m.attachments is list && m.attachments.size() <= 10
+        && (m.text.size() > 0 || m.attachments.size() > 0)
+        && m.reactions == {}
+        && m.pinned == false;
+    }
+
+    function isAuthorEdit() {
+      let m = request.resource.data;
+      return resource.data.authorId == request.auth.uid
+        && m.diff(resource.data).affectedKeys().hasOnly(['text', 'editedAt', 'mentions'])
+        && validText(m.text)
+        && (m.text.size() > 0 || m.attachments.size() > 0)
+        && m.editedAt == request.time
+        && m.mentions is list && m.mentions.size() <= 50;
+    }
+
+    // Reações: emoji → { uid: true }. O cliente informa em `lastReaction` qual emoji
+    // alterou; as regras garantem que somente a entrada do próprio usuário mudou.
+    function isOwnReaction() {
+      let m = request.resource.data;
+      let lr = m.lastReaction;
+      let e = lr.emoji;
+      let before = resource.data.reactions;
+      return m.diff(resource.data).affectedKeys().hasOnly(['reactions', 'lastReaction'])
+        && lr is map && lr.keys().hasOnly(['uid', 'emoji'])
+        && lr.uid == request.auth.uid
+        && e is string && e.size() > 0 && e.size() <= 64
+        && m.reactions.diff(before).affectedKeys().hasOnly([e])
+        && m.reactions.size() <= 64
+        && (
+          (e in m.reactions
+            && m.reactions[e] is map
+            && m.reactions[e].diff(before.get(e, {})).affectedKeys().hasOnly([request.auth.uid])
+            && (!(request.auth.uid in m.reactions[e]) || m.reactions[e][request.auth.uid] == true))
+          || (!(e in m.reactions) && before.get(e, {}).keys().hasOnly([request.auth.uid]))
+        );
+    }
+
+    function isPinToggle() {
+      let m = request.resource.data;
+      return m.diff(resource.data).affectedKeys().hasOnly(['pinned']) && m.pinned is bool;
+    }
+
+    // ───────────── usuários ─────────────
+
+    match /users/{uid} {
+      allow read: if signedIn();
+
+      allow create: if isSelf(uid)
+        && request.resource.data.keys().hasOnly(['uid', 'username', 'displayName', 'avatarUrl', 'bio', 'createdAt'])
+        && request.resource.data.uid == uid
+        && request.resource.data.username is string
+        && request.resource.data.username.matches('^[a-z0-9_.]{3,24}$')
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() > 0
+        && request.resource.data.displayName.size() <= 48
+        && request.resource.data.bio is string && request.resource.data.bio.size() <= 300
+        && (request.resource.data.avatarUrl == null || request.resource.data.avatarUrl is string)
+        && request.resource.data.createdAt == request.time
+        && getAfter(/databases/$(database)/documents/usernames/$(request.resource.data.username)).data.uid == uid;
+
+      // Nome de usuário, uid e data de criação são imutáveis pelo cliente.
+      allow update: if isSelf(uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'avatarUrl', 'bio'])
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() > 0
+        && request.resource.data.displayName.size() <= 48
+        && request.resource.data.bio is string && request.resource.data.bio.size() <= 300
+        && (request.resource.data.avatarUrl == null || request.resource.data.avatarUrl is string);
+
+      // Exclusão de conta passa pela API, que apaga dados associados.
+      allow delete: if false;
+
+      match /private/{doc} {
+        allow read, write: if isSelf(uid);
+      }
+
+      match /friends/{friendUid} {
+        allow read: if isSelf(uid);
+        allow write: if false;
+      }
+
+      match /blocks/{blockedUid} {
+        allow read: if isSelf(uid);
+        allow write: if false;
+      }
+
+      match /memberships/{cid} {
+        allow read: if isSelf(uid);
+        allow write: if false;
+      }
+    }
+
+    // Reserva de nome de usuário: um documento por nome, criado junto com o perfil.
+    match /usernames/{name} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['uid'])
+        && request.resource.data.uid == request.auth.uid
+        && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.username == name
+        && !exists(/databases/$(database)/documents/users/$(request.auth.uid));
+      allow update, delete: if false;
+    }
+
+    // ───────────── amizades ─────────────
+
+    match /friendRequests/{id} {
+      allow read: if signedIn()
+        && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
+      allow write: if false;
+    }
+
+    // ───────────── conversas privadas e grupos ─────────────
+
+    match /conversations/{convId} {
+      allow read: if signedIn() && request.auth.uid in resource.data.memberIds;
+      allow create, delete: if false;
+
+      // Membros atualizam apenas o resumo da última mensagem (ordenação, não lidas e notificações).
+      allow update: if signedIn()
+        && request.auth.uid in resource.data.memberIds
+        && resource.data.locked == false
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastMessageAt', 'lastMessagePreview', 'lastMessageAuthorId'])
+        && request.resource.data.lastMessageAt == request.time
+        && request.resource.data.lastMessageAuthorId == request.auth.uid
+        && request.resource.data.lastMessagePreview is string
+        && request.resource.data.lastMessagePreview.size() <= 120;
+
+      match /messages/{mid} {
+        allow read: if isConversationMember(convId);
+
+        allow create: if isConversationMember(convId)
+          && conversationData(convId).locked == false
+          && validNewMessage();
+
+        allow update: if isConversationMember(convId)
+          && (
+            (conversationData(convId).locked == false && isAuthorEdit())
+            || isOwnReaction()
+            || isPinToggle()
+          );
+
+        allow delete: if isConversationMember(convId) && resource.data.authorId == request.auth.uid;
+      }
+
+      // Quem está na chamada da conversa (escrito pelo webhook do LiveKit).
+      match /voiceStates/{uid} {
+        allow read: if isConversationMember(convId);
+        allow write: if false;
+      }
+    }
+
+    // ───────────── comunidades ─────────────
+
+    match /communities/{cid} {
+      allow read: if isMember(cid);
+      allow write: if false;
+
+      match /members/{uid} {
+        allow read: if isMember(cid);
+        allow write: if false;
+      }
+
+      match /categories/{catId} {
+        allow read: if isMember(cid);
+        allow write: if false;
+      }
+
+      // Metadados de canais são visíveis aos membros; o conteúdo respeita `access.view`.
+      match /channels/{chid} {
+        allow read: if isMember(cid);
+        allow write: if false;
+
+        match /messages/{mid} {
+          allow read: if isMember(cid) && canOnChannel(cid, chid, 'view');
+
+          allow create: if isMember(cid)
+            && canOnChannel(cid, chid, 'send')
+            && validNewMessage()
+            && (request.resource.data.attachments.size() == 0 || canOnChannel(cid, chid, 'attach'));
+
+          allow update: if isMember(cid)
+            && canOnChannel(cid, chid, 'view')
+            && (
+              (isAuthorEdit() && canOnChannel(cid, chid, 'send'))
+              || isOwnReaction()
+              || (isPinToggle() && myRank(cid) >= rank('moderator'))
+            );
+
+          allow delete: if isMember(cid)
+            && (resource.data.authorId == request.auth.uid || myRank(cid) >= rank('moderator'));
+        }
+      }
+
+      // Estados de voz: escritos pelo webhook do LiveKit através da API.
+      match /voiceStates/{uid} {
+        allow read: if isMember(cid);
+        allow write: if false;
+      }
+    }
+
+    // ───────────── convites ─────────────
+    // Leitura individual permite pré-visualizar o espaço antes de entrar.
+    // Listagem e resgate passam pela API (validação de validade e limite de usos).
+    match /invites/{code} {
+      allow get: if signedIn();
+      allow list, write: if false;
+    }
+
+    // Tudo que não foi explicitamente liberado é negado.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

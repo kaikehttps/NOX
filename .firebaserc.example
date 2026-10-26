@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "nox-dev-xxxxx",
+    "dev": "nox-dev-xxxxx",
+    "staging": "nox-staging-xxxxx",
+    "prod": "nox-prod-xxxxx"
+  }
+}

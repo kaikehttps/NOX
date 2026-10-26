@@ -1,0 +1,46 @@
+appId: app.nox.desktop
+productName: NOX
+copyright: NOX
+directories:
+  output: release/${version}
+  buildResources: build
+files:
+  - out/**
+  - package.json
+  - resources/**
+  - build/icon.png
+asarUnpack:
+  - resources/**
+protocols:
+  - name: NOX
+    schemes: [nox]
+win:
+  icon: build/icon.ico
+  target:
+    - target: nsis
+      arch: [x64]
+  artifactName: NOX-Setup-${version}.${ext}
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  shortcutName: NOX
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+mac:
+  icon: build/icon.png
+  category: public.app-category.social-networking
+  hardenedRuntime: true
+  entitlementsInherit: build/entitlements.mac.plist
+  extendInfo:
+    NSMicrophoneUsageDescription: O NOX usa o microfone nas chamadas de voz.
+    NSCameraUsageDescription: O NOX usa a câmera nas chamadas de vídeo.
+  target: [dmg]
+linux:
+  icon: build/icon.png
+  category: Network
+  target: [AppImage]
+# Atualizações: publicar em GitHub Releases (privado ou público) e habilitar electron-updater.
+# Ver docs/distribution.md.
+publish: null

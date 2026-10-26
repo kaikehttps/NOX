@@ -1,0 +1,25 @@
+{
+  "name": "@nox/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Backend confiável do NOX (Cloud Run): tokens de mídia, operações privilegiadas e webhooks.",
+  "scripts": {
+    "dev": "tsx watch --env-file-if-exists=.env src/server.ts",
+    "build": "esbuild src/server.ts --bundle --platform=node --target=node22 --format=esm --outfile=dist/server.mjs --external:firebase-admin --external:livekit-server-sdk --external:hono --external:@hono/node-server",
+    "start": "node dist/server.mjs",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.5",
+    "@nox/shared": "*",
+    "@nox/validation": "*",
+    "firebase-admin": "^14.5.0",
+    "hono": "^4.13.14",
+    "livekit-server-sdk": "^2.19.2"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "tsx": "^4.23.15"
+  }
+}
