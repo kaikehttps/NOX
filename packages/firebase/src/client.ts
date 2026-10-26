@@ -10,6 +10,7 @@ import {
 import { connectDatabaseEmulator, getDatabase, type Database } from 'firebase/database';
 import { connectStorageEmulator, getStorage, type FirebaseStorage } from 'firebase/storage';
 import { ApiClient } from './api';
+import { DirectApi, type NoxApi } from './direct';
 
 /** Configuração pública do app Firebase (não contém segredos) + URL da API. */
 export interface NoxConfig {
@@ -33,7 +34,10 @@ export interface NoxClient {
   db: Firestore;
   rtdb: Database;
   storage: FirebaseStorage;
-  api: ApiClient;
+  /** Servidor (se `apiBaseUrl` estiver configurada) ou modo direto pelo Firestore. */
+  api: NoxApi;
+  /** true quando há servidor: habilita a voz. */
+  hasServer: boolean;
   config: NoxConfig;
 }
 
@@ -62,13 +66,16 @@ export function createNoxClient(config: NoxConfig, adapters: PlatformAdapters): 
     connectStorageEmulator(storage, host, 9199);
   }
 
-  const api = new ApiClient(config.apiBaseUrl, async () => {
-    const user = auth.currentUser;
-    if (!user) throw new Error('não autenticado');
-    return user.getIdToken();
-  });
+  const hasServer = Boolean(config.apiBaseUrl);
+  const api: NoxApi = hasServer
+    ? new ApiClient(config.apiBaseUrl, async () => {
+        const user = auth.currentUser;
+        if (!user) throw new Error('não autenticado');
+        return user.getIdToken();
+      })
+    : new DirectApi(db, auth);
 
-  current = { app, auth, db, rtdb, storage, api, config };
+  current = { app, auth, db, rtdb, storage, api, hasServer, config };
   return current;
 }
 

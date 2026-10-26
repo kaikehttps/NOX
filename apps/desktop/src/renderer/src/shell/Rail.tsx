@@ -1,19 +1,43 @@
-import { memo } from 'react';
+import { memo, useEffect, useState } from 'react';
+import { deleteDoc, doc, getDocFromServer } from 'firebase/firestore';
 import { Plus } from 'lucide-react';
 import type { Community } from '@nox/shared';
 import { subscribeCommunity } from '@nox/firebase';
 import { useSubscription } from '@nox/firebase/react';
 import { NoxSymbol } from '../components/Logo';
 import { initials } from '../components/Avatar';
-import { lastChannelFor, useNav, useUi } from '../lib/context';
+import { lastChannelFor, useNav, useSession, useUi } from '../lib/context';
 import { useData } from '../lib/data';
 import { client } from '../lib/nox';
 import { CommunityModal } from '../modals/CommunityModal';
 
 const RailCommunity = memo(function RailCommunity({ communityId, active }: { communityId: string; active: boolean }) {
   const { go } = useNav();
-  const community = useSubscription<Community | null>((emit) => subscribeCommunity(client(), communityId, emit), [communityId]);
+  const { uid } = useSession();
+  const community = useSubscription<Community | null>(
+    (emit, fail) => subscribeCommunity(client(), communityId, emit, fail),
+    [communityId],
+  );
   const name = community.data?.name ?? '';
+
+  // Comunidade apagada ou acesso removido: depois de confirmar com uma nova leitura
+  // (evita corrida logo após criar/entrar), limpa o próprio índice para o ícone sumir.
+  const [gone, setGone] = useState(false);
+  const suspicious = community.data === null || community.error !== null;
+  useEffect(() => {
+    if (!suspicious) return;
+    const t = setTimeout(async () => {
+      const ref = doc(client().db, 'communities', communityId);
+      const stillGone = await getDocFromServer(ref)
+        .then((s) => !s.exists())
+        .catch((err: { code?: string }) => err.code === 'permission-denied');
+      if (!stillGone) return;
+      setGone(true);
+      await deleteDoc(doc(client().db, 'users', uid, 'memberships', communityId)).catch(() => undefined);
+    }, 4000);
+    return () => clearTimeout(t);
+  }, [suspicious, uid, communityId]);
+  if (gone) return null;
   return (
     <div className={`rail-slot${active ? ' active' : ''}`}>
       <button

@@ -3,10 +3,11 @@ rules_version = '2';
 // NOX — regras do Cloud Firestore.
 //
 // Princípios:
-// - Escritas que envolvem vários documentos ou terceiros (amizades, bloqueios,
-//   comunidades, canais, convites, papéis) são feitas apenas pela API (Admin SDK).
-// - O cliente escreve diretamente apenas: o próprio perfil, a reserva do nome de
-//   usuário, as próprias preferências e mensagens/reações/fixações.
+// - O app funciona sem servidor próprio ("modo direto"): amizades, bloqueios, grupos,
+//   comunidades, canais, convites e papéis são escritos pelo cliente em lotes/transações,
+//   e ESTAS REGRAS são a barreira de segurança de cada operação.
+// - O servidor (services/api) continua opcional: usa o Admin SDK e ignora estas regras.
+//   Ele é necessário apenas para tokens de voz (segredo do LiveKit) e webhooks.
 // - A hierarquia de papéis espelha packages/shared/src/permissions.ts (ROLE_RANK).
 // - Limites espelham packages/shared/src/limits.ts.
 
@@ -27,16 +28,63 @@ service cloud.firestore {
       return {'member': 0, 'moderator': 1, 'admin': 2, 'owner': 3}[role];
     }
 
-    function memberPath(cid) {
-      return /databases/$(database)/documents/communities/$(cid)/members/$(request.auth.uid);
+    function isRole(r) {
+      return r in ['owner', 'admin', 'moderator', 'member'];
     }
 
+    function userPath(uid) {
+      return /databases/$(database)/documents/users/$(uid);
+    }
+
+    function friendPath(owner, other) {
+      return /databases/$(database)/documents/users/$(owner)/friends/$(other);
+    }
+
+    function blockPath(owner, other) {
+      return /databases/$(database)/documents/users/$(owner)/blocks/$(other);
+    }
+
+    function requestPath(from, to) {
+      return /databases/$(database)/documents/friendRequests/$(from + '_' + to);
+    }
+
+    function communityPath(cid) {
+      return /databases/$(database)/documents/communities/$(cid);
+    }
+
+    function memberOf(cid, uid) {
+      return /databases/$(database)/documents/communities/$(cid)/members/$(uid);
+    }
+
+    function memberPath(cid) {
+      return memberOf(cid, request.auth.uid);
+    }
+
+    function invitePath(code) {
+      return /databases/$(database)/documents/invites/$(code);
+    }
+
+    function blockedEither(a, b) {
+      return exists(blockPath(a, b)) || exists(blockPath(b, a));
+    }
+
+    // ID determinístico da DM: dm_{menor}_{maior}
+    function isDmId(id, a, b) {
+      return (a < b && id == 'dm_' + a + '_' + b) || (b < a && id == 'dm_' + b + '_' + a);
+    }
+
+    // Membro só conta se a comunidade ainda existir (dados órfãos ficam inacessíveis).
     function isMember(cid) {
-      return signedIn() && exists(memberPath(cid));
+      return signedIn() && exists(memberPath(cid)) && exists(communityPath(cid));
     }
 
     function myRank(cid) {
       return rank(get(memberPath(cid)).data.role);
+    }
+
+    // Papel do usuário após o lote (permite criar a comunidade e seus canais de uma vez).
+    function myRankAfter(cid) {
+      return rank(getAfter(memberPath(cid)).data.role);
     }
 
     function channelData(cid, chid) {
@@ -56,6 +104,10 @@ service cloud.firestore {
 
     function isConversationMember(convId) {
       return signedIn() && request.auth.uid in conversationData(convId).memberIds;
+    }
+
+    function isNow(t) {
+      return t == request.time;
     }
 
     // ───────────── mensagens (comum a DMs e canais) ─────────────
@@ -153,26 +205,68 @@ service cloud.firestore {
         && request.resource.data.bio is string && request.resource.data.bio.size() <= 300
         && (request.resource.data.avatarUrl == null || request.resource.data.avatarUrl is string);
 
-      // Exclusão de conta passa pela API, que apaga dados associados.
-      allow delete: if false;
+      // Exclusão de conta (o cliente apaga os próprios dados antes).
+      allow delete: if isSelf(uid);
 
       match /private/{doc} {
         allow read, write: if isSelf(uid);
       }
 
+      // Amizade: o documento de cada lado é criado no mesmo lote em que o destinatário
+      // aceita a solicitação. Só é possível com uma solicitação pendente do OUTRO lado.
       match /friends/{friendUid} {
         allow read: if isSelf(uid);
-        allow write: if false;
+
+        allow create: if signedIn()
+          && uid != friendUid
+          && request.resource.data.keys().hasOnly(['uid', 'since', 'conversationId'])
+          && request.resource.data.uid == friendUid
+          && isNow(request.resource.data.since)
+          && isDmId(request.resource.data.conversationId, uid, friendUid)
+          && !blockedEither(uid, friendUid)
+          && (
+            (isSelf(uid) && exists(requestPath(friendUid, uid)))          // eu aceito o pedido dele
+            || (isSelf(friendUid) && exists(requestPath(uid, friendUid)))  // lado dele, ao aceitar o pedido dele
+          );
+
+        // Qualquer um dos dois pode desfazer a amizade (remove os dois lados).
+        allow delete: if isSelf(uid) || isSelf(friendUid);
+        allow update: if false;
       }
 
       match /blocks/{blockedUid} {
         allow read: if isSelf(uid);
-        allow write: if false;
+        allow create: if isSelf(uid)
+          && blockedUid != uid
+          && request.resource.data.keys().hasOnly(['uid', 'createdAt'])
+          && request.resource.data.uid == blockedUid
+          && isNow(request.resource.data.createdAt);
+        allow delete: if isSelf(uid);
+        allow update: if false;
       }
 
+      // Índice reverso das comunidades. O papel sempre espelha o documento de membro.
       match /memberships/{cid} {
         allow read: if isSelf(uid);
-        allow write: if false;
+
+        allow create: if isSelf(uid)
+          && request.resource.data.keys().hasOnly(['communityId', 'role', 'joinedAt'])
+          && request.resource.data.communityId == cid
+          && isNow(request.resource.data.joinedAt)
+          && request.resource.data.role == getAfter(memberOf(cid, uid)).data.role;
+
+        // Sincronização do papel feita por quem alterou o papel (admin+).
+        allow update: if signedIn()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role'])
+          && myRank(cid) >= rank('admin')
+          && request.resource.data.role == getAfter(memberOf(cid, uid)).data.role;
+
+        // O próprio usuário (saída, limpeza) ou quem o removeu da comunidade.
+        allow delete: if isSelf(uid)
+          || (signedIn()
+            && exists(memberPath(cid))
+            && myRank(cid) >= rank('moderator')
+            && !existsAfter(memberOf(cid, uid)));
       }
     }
 
@@ -184,32 +278,112 @@ service cloud.firestore {
         && request.resource.data.uid == request.auth.uid
         && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.username == name
         && !exists(/databases/$(database)/documents/users/$(request.auth.uid));
-      allow update, delete: if false;
+      // Liberado só na exclusão da conta (o perfil é apagado no mesmo lote).
+      allow delete: if signedIn()
+        && resource.data.uid == request.auth.uid
+        && !existsAfter(userPath(request.auth.uid));
+      allow update: if false;
     }
 
     // ───────────── amizades ─────────────
 
     match /friendRequests/{id} {
-      allow read: if signedIn()
+      // Consultar um pedido inexistente (para saber se já existe) não revela nada.
+      allow get: if signedIn()
+        && (resource == null || resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
+      allow list: if signedIn()
         && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
-      allow write: if false;
+
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['from', 'to', 'createdAt'])
+        && request.resource.data.from == request.auth.uid
+        && request.resource.data.to is string
+        && request.resource.data.to != request.auth.uid
+        && id == request.auth.uid + '_' + request.resource.data.to
+        && isNow(request.resource.data.createdAt)
+        && exists(userPath(request.auth.uid))
+        && exists(userPath(request.resource.data.to))
+        && !exists(friendPath(request.auth.uid, request.resource.data.to))
+        && !blockedEither(request.auth.uid, request.resource.data.to)
+        && (
+          !exists(/databases/$(database)/documents/users/$(request.resource.data.to)/private/settings)
+          || get(/databases/$(database)/documents/users/$(request.resource.data.to)/private/settings).data.get('allowFriendRequests', true) != false
+        );
+
+      // Recusar (destinatário) ou cancelar (remetente).
+      allow delete: if signedIn()
+        && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
+      allow update: if false;
     }
 
     // ───────────── conversas privadas e grupos ─────────────
 
+    function isFriendOrMe(m, i) {
+      return m.size() <= i || m[i] == request.auth.uid || exists(friendPath(request.auth.uid, m[i]));
+    }
+
+    function validNewConversationBase() {
+      let c = request.resource.data;
+      return c.keys().hasOnly(['type', 'memberIds', 'name', 'ownerId', 'locked', 'createdAt', 'lastMessageAt', 'lastMessagePreview', 'lastMessageAuthorId'])
+        && c.memberIds is list
+        && request.auth.uid in c.memberIds
+        && c.locked == false
+        && isNow(c.createdAt)
+        && isNow(c.lastMessageAt)
+        && c.lastMessagePreview == null
+        && c.lastMessageAuthorId == null;
+    }
+
     match /conversations/{convId} {
       allow read: if signedIn() && request.auth.uid in resource.data.memberIds;
-      allow create, delete: if false;
 
-      // Membros atualizam apenas o resumo da última mensagem (ordenação, não lidas e notificações).
+      allow create: if signedIn()
+        && validNewConversationBase()
+        && (
+          // DM: só entre amigos (as duas amizades existem ao fim do lote)
+          (request.resource.data.type == 'dm'
+            && request.resource.data.memberIds.size() == 2
+            && request.resource.data.memberIds[0] < request.resource.data.memberIds[1]
+            && convId == 'dm_' + request.resource.data.memberIds[0] + '_' + request.resource.data.memberIds[1]
+            && request.resource.data.name == null
+            && request.resource.data.ownerId == null
+            && existsAfter(friendPath(request.resource.data.memberIds[0], request.resource.data.memberIds[1]))
+            && existsAfter(friendPath(request.resource.data.memberIds[1], request.resource.data.memberIds[0])))
+          // Grupo: até 10 pessoas, todas amigas de quem cria
+          || (request.resource.data.type == 'group'
+            && request.resource.data.ownerId == request.auth.uid
+            && request.resource.data.memberIds.size() >= 3
+            && request.resource.data.memberIds.size() <= 10
+            && (request.resource.data.name == null || (request.resource.data.name is string && request.resource.data.name.size() <= 64))
+            && isFriendOrMe(request.resource.data.memberIds, 0) && isFriendOrMe(request.resource.data.memberIds, 1)
+            && isFriendOrMe(request.resource.data.memberIds, 2) && isFriendOrMe(request.resource.data.memberIds, 3)
+            && isFriendOrMe(request.resource.data.memberIds, 4) && isFriendOrMe(request.resource.data.memberIds, 5)
+            && isFriendOrMe(request.resource.data.memberIds, 6) && isFriendOrMe(request.resource.data.memberIds, 7)
+            && isFriendOrMe(request.resource.data.memberIds, 8) && isFriendOrMe(request.resource.data.memberIds, 9))
+        );
+
+      allow delete: if false;
+
       allow update: if signedIn()
         && request.auth.uid in resource.data.memberIds
-        && resource.data.locked == false
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastMessageAt', 'lastMessagePreview', 'lastMessageAuthorId'])
-        && request.resource.data.lastMessageAt == request.time
-        && request.resource.data.lastMessageAuthorId == request.auth.uid
-        && request.resource.data.lastMessagePreview is string
-        && request.resource.data.lastMessagePreview.size() <= 120;
+        && (
+          // Resumo da última mensagem (ordenação, não lidas e notificações)
+          (resource.data.locked == false
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastMessageAt', 'lastMessagePreview', 'lastMessageAuthorId'])
+            && request.resource.data.lastMessageAt == request.time
+            && request.resource.data.lastMessageAuthorId == request.auth.uid
+            && request.resource.data.lastMessagePreview is string
+            && request.resource.data.lastMessagePreview.size() <= 120)
+          // Travar (fim da amizade ou bloqueio): qualquer membro, a qualquer momento
+          || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['locked'])
+            && request.resource.data.locked == true)
+          // Destravar DM: só quando os dois voltam a ser amigos no mesmo lote
+          || (resource.data.type == 'dm'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['locked'])
+            && request.resource.data.locked == false
+            && existsAfter(friendPath(resource.data.memberIds[0], resource.data.memberIds[1]))
+            && existsAfter(friendPath(resource.data.memberIds[1], resource.data.memberIds[0])))
+        );
 
       match /messages/{mid} {
         allow read: if isConversationMember(convId);
@@ -237,24 +411,119 @@ service cloud.firestore {
 
     // ───────────── comunidades ─────────────
 
+    function validCommunityFields(c) {
+      return c.name is string && c.name.size() >= 2 && c.name.size() <= 64
+        && c.description is string && c.description.size() <= 500
+        && (c.iconUrl == null || (c.iconUrl is string && c.iconUrl.size() <= 2048));
+    }
+
+    function validAccess(a) {
+      return a is map
+        && a.keys().hasOnly(['view', 'send', 'attach', 'connect'])
+        && a.keys().hasAll(['view', 'send', 'attach', 'connect'])
+        && isRole(a.view) && isRole(a.send) && isRole(a.attach) && isRole(a.connect);
+    }
+
+    function validChannel(c) {
+      return c.keys().hasOnly(['name', 'type', 'categoryId', 'topic', 'position', 'access'])
+        && c.name is string && c.name.size() >= 1 && c.name.size() <= 48
+        && c.type in ['text', 'voice']
+        && (c.categoryId == null || c.categoryId is string)
+        && c.topic is string && c.topic.size() <= 300
+        && c.position is int && c.position >= 0
+        && validAccess(c.access);
+    }
+
+    function validCategory(c) {
+      return c.keys().hasOnly(['name', 'position'])
+        && c.name is string && c.name.size() >= 1 && c.name.size() <= 48
+        && c.position is int && c.position >= 0;
+    }
+
+    // Resgate de convite válido para esta comunidade, com o uso contabilizado no mesmo lote.
+    function redeemsInvite(cid, code) {
+      let inv = get(invitePath(code)).data;
+      return code is string
+        && exists(invitePath(code))
+        && inv.communityId == cid
+        && inv.revoked == false
+        && (inv.expiresAt == null || inv.expiresAt > request.time)
+        && (inv.maxUses == null || inv.uses < inv.maxUses)
+        && getAfter(invitePath(code)).data.uses == inv.uses + 1;
+    }
+
     match /communities/{cid} {
       allow read: if isMember(cid);
-      allow write: if false;
+
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['name', 'description', 'iconUrl', 'ownerId', 'createdAt'])
+        && request.resource.data.ownerId == request.auth.uid
+        && isNow(request.resource.data.createdAt)
+        && validCommunityFields(request.resource.data)
+        && getAfter(memberPath(cid)).data.role == 'owner';
+
+      allow update: if isMember(cid)
+        && myRank(cid) >= rank('admin')
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'description', 'iconUrl'])
+        && validCommunityFields(request.resource.data);
+
+      allow delete: if isMember(cid) && resource.data.ownerId == request.auth.uid;
 
       match /members/{uid} {
-        allow read: if isMember(cid);
-        allow write: if false;
+        // Ler o próprio documento permite saber se já é membro antes de resgatar um convite.
+        allow read: if isMember(cid) || isSelf(uid);
+
+        allow create: if isSelf(uid)
+          && request.resource.data.uid == uid
+          && isNow(request.resource.data.joinedAt)
+          && (
+            // Dono, na criação da comunidade
+            (request.resource.data.keys().hasOnly(['uid', 'role', 'joinedAt'])
+              && request.resource.data.role == 'owner'
+              && !exists(communityPath(cid))
+              && getAfter(communityPath(cid)).data.ownerId == uid)
+            // Membro, resgatando um convite válido
+            || (request.resource.data.keys().hasOnly(['uid', 'role', 'joinedAt', 'inviteCode'])
+              && request.resource.data.role == 'member'
+              && exists(communityPath(cid))
+              && redeemsInvite(cid, request.resource.data.inviteCode))
+          );
+
+        // Atribuir papel: admin+, só abaixo de si, nunca "owner", nunca a si mesmo.
+        allow update: if isMember(cid)
+          && uid != request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role'])
+          && isRole(request.resource.data.role)
+          && request.resource.data.role != 'owner'
+          && myRank(cid) >= rank('admin')
+          && myRank(cid) > rank(resource.data.role)
+          && myRank(cid) > rank(request.resource.data.role);
+
+        allow delete: if signedIn() && (
+          // Sair (o dono transfere ou apaga a comunidade antes)
+          (isSelf(uid) && resource.data.role != 'owner')
+          // Dono apagando a própria comunidade
+          || (isSelf(uid) && resource.data.role == 'owner' && !existsAfter(communityPath(cid)))
+          // Remover alguém: moderador+, só quem está abaixo
+          || (isMember(cid) && myRank(cid) >= rank('moderator') && myRank(cid) > rank(resource.data.role))
+        );
       }
 
       match /categories/{catId} {
         allow read: if isMember(cid);
-        allow write: if false;
+        allow create, update: if signedIn()
+          && myRankAfter(cid) >= rank('admin')
+          && validCategory(request.resource.data);
+        allow delete: if isMember(cid) && myRank(cid) >= rank('admin');
       }
 
       // Metadados de canais são visíveis aos membros; o conteúdo respeita `access.view`.
       match /channels/{chid} {
         allow read: if isMember(cid);
-        allow write: if false;
+        allow create, update: if signedIn()
+          && myRankAfter(cid) >= rank('admin')
+          && validChannel(request.resource.data);
+        allow delete: if isMember(cid) && myRank(cid) >= rank('admin');
 
         match /messages/{mid} {
           allow read: if isMember(cid) && canOnChannel(cid, chid, 'view');
@@ -285,11 +554,44 @@ service cloud.firestore {
     }
 
     // ───────────── convites ─────────────
-    // Leitura individual permite pré-visualizar o espaço antes de entrar.
-    // Listagem e resgate passam pela API (validação de validade e limite de usos).
+
     match /invites/{code} {
+      // Pré-visualização individual pelo código (é preciso conhecê-lo).
       allow get: if signedIn();
-      allow list, write: if false;
+      // Cada moderador lista os convites que ele mesmo criou.
+      allow list: if signedIn() && resource.data.createdBy == request.auth.uid;
+
+      allow create: if signedIn()
+        && code.matches('^[abcdefghjkmnpqrstuvwxyz23456789]{10}$')
+        && request.resource.data.keys().hasOnly(['communityId', 'communityName', 'createdBy', 'createdAt', 'expiresAt', 'maxUses', 'uses', 'revoked'])
+        && request.resource.data.createdBy == request.auth.uid
+        && isMember(request.resource.data.communityId)
+        && myRank(request.resource.data.communityId) >= rank('moderator')
+        && request.resource.data.communityName == get(communityPath(request.resource.data.communityId)).data.name
+        && isNow(request.resource.data.createdAt)
+        && request.resource.data.uses == 0
+        && request.resource.data.revoked == false
+        && (request.resource.data.maxUses == null
+          || (request.resource.data.maxUses is int && request.resource.data.maxUses >= 1 && request.resource.data.maxUses <= 1000))
+        && (request.resource.data.expiresAt == null
+          || (request.resource.data.expiresAt is timestamp
+            && request.resource.data.expiresAt > request.time
+            && request.resource.data.expiresAt <= request.time + duration.value(31, 'd')));
+
+      allow update: if signedIn() && (
+        // Revogar: moderador+ da comunidade
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['revoked'])
+          && request.resource.data.revoked == true
+          && isMember(resource.data.communityId)
+          && myRank(resource.data.communityId) >= rank('moderator'))
+        // Usar: +1 exatamente quando o próprio usuário entra na comunidade no mesmo lote
+        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uses'])
+          && request.resource.data.uses == resource.data.uses + 1
+          && !exists(memberOf(resource.data.communityId, request.auth.uid))
+          && existsAfter(memberOf(resource.data.communityId, request.auth.uid)))
+      );
+
+      allow delete: if false;
     }
 
     // Tudo que não foi explicitamente liberado é negado.

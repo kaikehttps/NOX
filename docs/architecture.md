@@ -18,7 +18,14 @@
  Firebase: Auth · Firestore (mensagens, dados) · RTDB (presença) · Storage (arquivos)
 ```
 
-Princípio: **o cliente escreve diretamente só o que as regras conseguem validar sozinhas** (próprio perfil, preferências, mensagens, reações, fixações). Tudo que envolve vários documentos, terceiros ou contadores (aceitar amizade cria 2 amizades + 1 DM; resgatar convite incrementa usos atomicamente; bloquear trava a DM e apaga solicitações) passa pela API em transações do Admin SDK.
+### Dois modos de operação
+
+- **Modo direto (padrão, plano Spark, sem servidor)**: quando `apiBaseUrl` está vazia, o cliente usa `DirectApi` (`packages/firebase/src/direct.ts`) e grava amizades, bloqueios, grupos, comunidades, canais, convites e papéis direto no Firestore em lotes/transações. **As regras são a barreira de segurança** de cada operação (amizade só com pedido pendente do outro lado; convite resgatado só com +1 no uso no mesmo lote; papéis só abaixo do próprio; etc.) e têm testes de abuso em `firebase/tests/direct.test.ts`. Limitações: grupos com até 10 pessoas; contadores (comunidades por dono, convites ativos) não são impostos; voz indisponível.
+- **Modo servidor**: com `apiBaseUrl` configurada, as mesmas operações vão para o `nox-api` (Admin SDK), que adiciona limites de taxa e contagens. É obrigatório para **voz** (o segredo do LiveKit fica no servidor).
+
+As telas usam a mesma interface (`NoxApi`) nos dois modos.
+
+Princípio original do modo servidor: **o cliente escreve diretamente só o que as regras conseguem validar sozinhas** (próprio perfil, preferências, mensagens, reações, fixações). Tudo que envolve vários documentos, terceiros ou contadores (aceitar amizade cria 2 amizades + 1 DM; resgatar convite incrementa usos atomicamente; bloquear trava a DM e apaga solicitações) passa pela API em transações do Admin SDK.
 
 A mesma tabela de permissões (`packages/shared/src/permissions.ts`) é usada pela API, pela interface (esconder ações indisponíveis) e espelhada nas regras do Firestore/Storage (`rank()`). A interface nunca é a barreira de segurança.
 

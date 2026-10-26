@@ -148,9 +148,11 @@ describe('perfil e nome de usuário', () => {
     await assertFails(getDoc(doc(db('alice'), 'users/bob/private/settings')));
   });
 
-  it('impede o cliente de criar amizades e bloqueios diretamente', async () => {
-    await assertFails(setDoc(doc(db('eve'), 'users/eve/friends/bob'), { since: new Date() }));
-    await assertFails(setDoc(doc(db('bob'), 'users/bob/blocks/eve'), { createdAt: new Date() }));
+  it('amizade sem solicitação é negada; bloqueio só em nome próprio', async () => {
+    await assertFails(setDoc(doc(db('eve'), 'users/eve/friends/bob'), { uid: 'bob', since: serverTimestamp(), conversationId: 'dm_bob_eve' }));
+    await assertFails(setDoc(doc(db('eve'), 'users/bob/friends/eve'), { uid: 'eve', since: serverTimestamp(), conversationId: 'dm_bob_eve' }));
+    await assertSucceeds(setDoc(doc(db('bob'), 'users/bob/blocks/eve'), { uid: 'eve', createdAt: serverTimestamp() }));
+    await assertFails(setDoc(doc(db('eve'), 'users/bob/blocks/alice'), { uid: 'alice', createdAt: serverTimestamp() }));
   });
 });
 
@@ -166,8 +168,10 @@ describe('solicitações de amizade', () => {
     await assertFails(getDocs(collection(db('bob'), 'friendRequests')));
   });
 
-  it('não podem ser criadas pelo cliente', async () => {
+  it('só podem ser criadas em nome próprio e com formato válido', async () => {
+    await assertFails(setDoc(doc(db('eve'), 'friendRequests/alice_bob'), { from: 'alice', to: 'bob', createdAt: serverTimestamp() }));
     await assertFails(setDoc(doc(db('eve'), 'friendRequests/eve_alice'), { from: 'eve', to: 'alice' }));
+    await assertFails(setDoc(doc(db('eve'), 'friendRequests/eve_bob'), { from: 'eve', to: 'bob', createdAt: serverTimestamp() })); // já existe
   });
 });
 
@@ -262,10 +266,15 @@ describe('comunidades e canais', () => {
     await assertFails(setDoc(doc(db('eve'), 'communities/c1/channels/geral/messages/g2'), newMessage('eve')));
   });
 
-  it('cliente não cria canais, membros ou papéis', async () => {
-    await assertFails(setDoc(doc(db('alice'), 'communities/c1/channels/novo'), { name: 'novo', type: 'text', access }));
-    await assertFails(setDoc(doc(db('bob'), 'communities/c1/members/bob'), { uid: 'bob', role: 'owner' }));
-    await assertFails(setDoc(doc(db('eve'), 'communities/c1/members/eve'), { uid: 'eve', role: 'member' }));
+  it('só admin+ cria canais; ninguém se promove ou entra sem convite', async () => {
+    const ch = { name: 'novo', type: 'text', categoryId: null, topic: '', position: 9, access };
+    await assertSucceeds(setDoc(doc(db('alice'), 'communities/c1/channels/novo'), ch));
+    await assertFails(setDoc(doc(db('bob'), 'communities/c1/channels/outro'), ch));
+    await assertFails(setDoc(doc(db('alice'), 'communities/c1/channels/ruim'), { ...ch, type: 'video' }));
+    await assertFails(updateDoc(doc(db('bob'), 'communities/c1/members/bob'), { role: 'owner' }));
+    await assertFails(updateDoc(doc(db('mod'), 'communities/c1/members/bob'), { role: 'moderator' }));
+    await assertFails(setDoc(doc(db('eve'), 'communities/c1/members/eve'), { uid: 'eve', role: 'member', joinedAt: serverTimestamp() }));
+    await assertFails(setDoc(doc(db('eve'), 'communities/c1/members/eve'), { uid: 'eve', role: 'owner', joinedAt: serverTimestamp() }));
   });
 
   it('moderador apaga e fixa mensagens de outros; membro não', async () => {

@@ -25,7 +25,8 @@ export const LIMITS = {
     ownedMax: 50,
   },
   channel: { nameMax: 48, topicMax: 300 },
-  group: { membersMax: 25, nameMax: 64 },
+  /** Máximo verificável pelas regras do Firestore no modo direto. */
+  group: { membersMax: 10, nameMax: 64 },
   invite: {
     maxUsesCap: 1000,
     maxAgeSeconds: 60 * 60 * 24 * 30,
