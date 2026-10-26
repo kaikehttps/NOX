@@ -16,7 +16,6 @@ export const missingConfig: string[] = useEmulators
         ['VITE_FIREBASE_PROJECT_ID', env.VITE_FIREBASE_PROJECT_ID],
         ['VITE_FIREBASE_APP_ID', env.VITE_FIREBASE_APP_ID],
         ['VITE_FIREBASE_DATABASE_URL', env.VITE_FIREBASE_DATABASE_URL],
-        ['VITE_API_BASE_URL', env.VITE_API_BASE_URL],
       ] as const
     )
       .filter(([, v]) => !v)
@@ -35,7 +34,7 @@ function buildConfig(): NoxConfig {
       databaseURL: env.VITE_FIREBASE_DATABASE_URL || `https://${projectId}-default-rtdb.firebaseio.com`,
       ...(env.VITE_FIREBASE_MESSAGING_SENDER_ID ? { messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID } : {}),
     },
-    apiBaseUrl: env.VITE_API_BASE_URL || 'http://127.0.0.1:8787',
+    apiBaseUrl: env.VITE_API_BASE_URL || (useEmulators ? 'http://127.0.0.1:8787' : ''),
     emulatorHost: useEmulators ? '127.0.0.1' : null,
   };
 }

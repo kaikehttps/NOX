@@ -36,6 +36,9 @@ export class ApiClient {
   ) {}
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
+    if (!this.baseUrl) {
+      throw new ApiClientError(0, 'api_not_configured', 'O servidor do NOX ainda não está no ar. Amizades, comunidades e voz voltam assim que ele for publicado.');
+    }
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
     let res: Response;

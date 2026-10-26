@@ -1,0 +1,23 @@
+# Blueprint do Render para o nox-api (plano gratuito).
+# Dashboard → New → Blueprint → escolha este repositório. Os valores `sync: false` são pedidos na criação.
+services:
+  - type: web
+    name: nox-api
+    runtime: docker
+    dockerfilePath: ./services/api/Dockerfile
+    dockerContext: .
+    plan: free
+    region: oregon
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: FIREBASE_PROJECT_ID
+        value: noxxxxx
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: LIVEKIT_URL
+        sync: false
+      - key: LIVEKIT_API_KEY
+        sync: false
+      - key: LIVEKIT_API_SECRET
+        sync: false

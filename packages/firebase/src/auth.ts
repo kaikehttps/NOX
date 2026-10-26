@@ -45,6 +45,9 @@ const AUTH_MESSAGES: Record<string, string> = {
   'auth/account-exists-with-different-credential': 'Este e-mail já está ligado a outro método de login.',
   'auth/requires-recent-login': 'Por segurança, entre novamente antes de continuar.',
   'auth/popup-closed-by-user': 'Login cancelado.',
+  'auth/configuration-not-found': 'O login ainda não foi ativado neste projeto do Firebase (Authentication → Começar).',
+  'auth/operation-not-allowed': 'Este método de login não está ativado no Firebase.',
+  'auth/unauthorized-domain': 'Este endereço não está autorizado no Firebase Authentication.',
 };
 
 export function authErrorMessage(err: unknown): string {

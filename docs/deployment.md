@@ -56,6 +56,20 @@ Um projeto Firebase/GCP por ambiente isola dados, cotas, regras e faturamento. C
 
 Voz local sem nuvem: o servidor oficial tem binários para Windows/macOS/Linux ([releases](https://github.com/livekit/livekit/releases)). `livekit-server --dev` sobe em `ws://127.0.0.1:7880` com a chave de desenvolvimento documentada pelo LiveKit; use esses valores em `services/api/.env`. Webhooks locais exigem configurar `webhook.urls` no YAML do servidor.
 
+## 4a. Alternativa gratuita: nox-api no Render (sem Blaze)
+
+Para ficar no plano Spark do Firebase, hospede o `nox-api` fora do Google. O arquivo [render.yaml](../render.yaml) descreve o serviço (Docker, plano gratuito). O serviço gratuito "dorme" após ~15 min sem uso; a primeira ação seguinte leva cerca de 30–60 s.
+
+1. Suba o repositório para o GitHub (privado serve).
+2. Firebase Console → Configurações do projeto → **Contas de serviço** → *Gerar nova chave privada*. É um segredo administrativo: guarde só em variável de ambiente do servidor, nunca no repositório nem nos apps.
+3. Render → New → **Blueprint** → escolha o repositório. Preencha:
+   - `FIREBASE_SERVICE_ACCOUNT_JSON`: o conteúdo do JSON da chave (ou em base64).
+   - `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`: do projeto LiveKit (plano Build é gratuito).
+4. Copie a URL do serviço (`https://nox-api-xxxx.onrender.com`) para `VITE_API_BASE_URL` em `apps/desktop/.env.production` e gere de novo o instalador/site.
+5. LiveKit → Webhooks: `https://<url>/v1/livekit/webhook`.
+
+Mesmo código, outra credencial: no Cloud Run ele usa a identidade do serviço; fora do Google, usa `FIREBASE_SERVICE_ACCOUNT_JSON`.
+
 ## 4. Cloud Run
 
 Conta de serviço dedicada com o mínimo necessário:

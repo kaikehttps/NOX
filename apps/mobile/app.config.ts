@@ -27,8 +27,8 @@ const plugins: PluginEntry[] = [
       imageWidth: 112,
       resizeMode: 'contain',
       // Sem variante "dark": o splash já é escuro e um dark-mode separado conflita com userInterfaceStyle no iOS.
-  // Voz/WebRTC usam módulos nativos: sem build web.
-  platforms: ['android', 'ios'],
+  // Web: prévia da interface no navegador (voz/Google nativos têm limitações).
+  platforms: ['android', 'ios', 'web'],
     },
   ],
   [
@@ -92,6 +92,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'android.permission.READ_EXTERNAL_STORAGE',
       'android.permission.WRITE_EXTERNAL_STORAGE',
     ],
+  },
+  web: {
+    bundler: 'metro',
+    output: 'single',
+    favicon: './assets/favicon.png',
+    backgroundColor: BG,
   },
   plugins,
   experiments: {
