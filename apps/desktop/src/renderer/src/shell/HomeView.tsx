@@ -241,7 +241,7 @@ export function HomeView({ tab }: { tab: HomeTab }) {
                       <button className="icon-btn" title="Mensagem" onClick={() => go({ kind: 'conversation', conversationId: f.conversationId })}>
                         <MessageSquare size={15} />
                       </button>
-                      <button className="icon-btn" title="Chamar" onClick={() => void call(f.uid)}>
+                      <button className="icon-btn" title={client().hasServer ? 'Chamar' : 'Voz ainda indisponível'} disabled={!client().hasServer} onClick={() => void call(f.uid)}>
                         <Phone size={15} />
                       </button>
                       <button className="icon-btn" title="Mais" onClick={(e) => friendMenu(e, p)}>

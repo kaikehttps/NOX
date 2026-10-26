@@ -111,7 +111,7 @@ export function ConversationView({ conversationId, conversation }: { conversatio
           {conversation.type === 'group' && <span className="topic">{conversation.memberIds.length} membros</span>}
           {conversation.locked && <span className="chip bad">bloqueada</span>}
           <div className="actions">
-            {!conversation.locked && !inCall && (
+            {!conversation.locked && !inCall && client().hasServer && (
               <button className="icon-btn" title="Iniciar chamada de voz" onClick={startCall}>
                 <Phone size={16} />
               </button>

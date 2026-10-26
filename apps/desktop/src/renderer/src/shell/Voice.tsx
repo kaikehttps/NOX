@@ -254,8 +254,15 @@ export function VoiceStage(props: { roomRef: VoiceRoomRef; title: string; occupa
               Ninguém na sala ainda. Entre e chame o grupo.
             </p>
           )}
-          {lastError && <div className="error-line">{lastError}</div>}
-          <button className="btn primary lg" disabled={!props.canConnect} onClick={join}>
+          {!client().hasServer ? (
+            <div className="terminal-lines" style={{ maxWidth: 420, textAlign: 'left' }}>
+              <div className="faint">// voz offline</div>
+              <div>As chamadas precisam do servidor de voz do NOX, que ainda não foi ligado. Mensagens, amigos e comunidades já funcionam.</div>
+            </div>
+          ) : (
+            lastError && <div className="error-line">{lastError}</div>
+          )}
+          <button className="btn primary lg" disabled={!props.canConnect || !client().hasServer} onClick={join}>
             <Headphones size={16} /> {lastError ? 'Tentar novamente' : 'Entrar na sala'}
           </button>
           {!props.canConnect && <span className="hint">Você não tem permissão para conectar neste canal.</span>}

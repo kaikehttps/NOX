@@ -33,3 +33,6 @@ ui-debug.log
 apps/mobile/android/
 apps/mobile/ios/
 **/e2e/shots/
+
+# Cache do Firebase Hosting
+.firebase/
